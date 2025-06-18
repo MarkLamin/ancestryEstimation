@@ -13,6 +13,8 @@ referencePanel=$1
 studySample=$2
 returnDirectory=$3
 pathToRepo=$4
+popLabels=$5
+rfMixResults=$6
 
 #make return directory if it doesn't exist
 mkdir -p $returnDirectory
