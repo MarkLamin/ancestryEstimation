@@ -1,18 +1,18 @@
 #!/bin/bash
-#SBATCH -A saonli
 #SBATCH --time=8:00:00
-#SBATCH --job-name=abstractDataCleaning
+#SBATCH --job-name=harmonizationPipeline
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=200g
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user=lamin022@umn.edu
-#SBATCH --output=abstractDataCleaning.out
-#SBATCH --error=abstractDataCleaning.err
+#SBATCH --mail-user=
+#SBATCH --output=harmonizationPipeline.out
+#SBATCH --error=harmonizationPipeline.err
 
 referencePanel=$1
 studySample=$2
 returnDirectory=$3
+pathToRepo=$4
 
 #make return directory if it doesn't exist
 mkdir -p $returnDirectory
@@ -39,7 +39,7 @@ plink --bfile $studySample \
     --out $returnDirectory/stuSample
     
 #find SNPs that are common between each data set
-Rscript commonSNP.R $returnDirectory
+Rscript $pathToRepo/commonSNP.R $returnDirectory
 
 #filter datasets to only contain common snps
 plink --bfile $returnDirectory/refPanel \
@@ -53,7 +53,7 @@ plink --bfile $returnDirectory/stuSample \
     --out $returnDirectory/stuCommon
     
 #find SNPs that should be flipped to other strand
-Rscript snpToFlip.R $returnDirectory
+Rscript $pathToRepo/snpToFlip.R $returnDirectory
 
 #flip strands on indicated SNPs
 plink --bfile $returnDirectory/refCommon \
@@ -67,7 +67,7 @@ plink --bfile $returnDirectory/stuCommon \
     --out $returnDirectory/stuFlipped
     
 #reorder snps so that Allele1 is always A
-Rscript snpToReOrder.R $returnDirectory
+Rscript $pathToRepo/snpToReOrder.R $returnDirectory
 
 plink --bfile $returnDirectory/refFlipped \
     --a1-allele $returnDirectory/refReOrder.txt 2 1 \
@@ -80,7 +80,7 @@ plink --bfile $returnDirectory/stuFlipped \
     --out $returnDirectory/stuReady
     
 #rename SNPs so that the names are consistent between data sets
-Rscript snpRename.R $returnDirectory
+Rscript $pathToRepo/snpRename.R $returnDirectory
 
 #merge datasets
 plink --bfile $returnDirectory/refReady \
@@ -90,7 +90,7 @@ plink --bfile $returnDirectory/refReady \
     --out $returnDirectory/allData
     
 #find non bi allelic SNPs
-Rscript snpNonBiAllelic.R $returnDirectory
+Rscript $pathToRepo/snpNonBiAllelic.R $returnDirectory
 
 #remove non bi allelic SNPs
 #and also remove SNPs with high missingness too
@@ -104,9 +104,6 @@ plink --bfile $returnDirectory/allData \
 plink --bfile $returnDirectory/allDataBiAllelic \
     --pca \
     --out $returnDirectory/pcaResult
-    
-#perform UMAP on PCs
-Rscript umapOnPC.R $returnDirectory
 
 #perform UMAP directly on genotype data
-Rscript umapOnBigData.R $returnDirectory
+Rscript $pathToRepo/umapOnBigData.R $returnDirectory
