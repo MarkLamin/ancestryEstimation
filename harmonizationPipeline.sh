@@ -110,16 +110,19 @@ plink --bfile $returnDirectory/allDataBiAllelic \
 Rscript $pathToRepo/umapOnBigData.R $returnDirectory
 
 #Deleting files not needed anymore
-rm $returnDirectory/allData.*
-rm $returnDirectory/common*Snps.txt
-rm $returnDirectory/nonBiAllelicSnps.txt
-rm $returnDirectory/refCommon.*
-rm $returnDirectory/refFlipped.*
-rm $returnDirectory/refPanel.*
-rm $returnDirectory/refReOrder.txt
-rm $returnDirectory/refSnpToFlip.txt
-rm $returnDirectory/stuCommon.*
-rm $returnDirectory/stuFlipped.*
-rm $returnDirectory/stuReOrder.txt
-rm $returnDirectory/stuSample.*
-rm $returnDirectory/stuSnpToFlip.txt
+
+cd $returnDirectory
+
+rm allData.*
+rm common*Snps.txt
+rm nonBiAllelicSnps.txt
+rm refCommon.*
+rm refFlipped.*
+rm refPanel.*
+rm refReOrder.txt
+rm refSnpToFlip.txt
+rm stuCommon.*
+rm stuFlipped.*
+rm stuReOrder.txt
+rm stuSample.*
+rm stuSnpToFlip.txt
