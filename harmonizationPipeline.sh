@@ -19,6 +19,8 @@ rfMixResults=$6
 #make return directory if it doesn't exist
 mkdir -p $returnDirectory
 
+cd $returnDirectory
+
 module load plink
 module load R/4.4.0-openblas-rocky8
 
@@ -29,7 +31,7 @@ plink --bfile $referencePanel \
     --autosome \
     --allow-no-sex \
     --make-bed \
-    --out $returnDirectory/refPanel
+    --out refPanel
     
 plink --bfile $studySample \
     --biallelic-only strict \
@@ -37,81 +39,79 @@ plink --bfile $studySample \
     --autosome \
     --allow-no-sex \
     --make-bed \
-    --out $returnDirectory/stuSample
+    --out stuSample
     
 #find SNPs that are common between each data set
 Rscript $pathToRepo/commonSNP.R $returnDirectory
 
 #filter datasets to only contain common snps
-plink --bfile $returnDirectory/refPanel \
-    --extract $returnDirectory/commonRefSnps.txt \
+plink --bfile refPanel \
+    --extract commonRefSnps.txt \
     --make-bed \
-    --out $returnDirectory/refCommon
+    --out refCommon
     
-plink --bfile $returnDirectory/stuSample \
-    --extract $returnDirectory/commonStuSnps.txt \
+plink --bfile stuSample \
+    --extract commonStuSnps.txt \
     --make-bed \
-    --out $returnDirectory/stuCommon
+    --out stuCommon
     
 #find SNPs that should be flipped to other strand
 Rscript $pathToRepo/snpToFlip.R $returnDirectory
 
 #flip strands on indicated SNPs
-plink --bfile $returnDirectory/refCommon \
-    --flip $returnDirectory/refSnpToFlip.txt \
+plink --bfile refCommon \
+    --flip refSnpToFlip.txt \
     --make-bed \
-    --out $returnDirectory/refFlipped
+    --out refFlipped
     
-plink --bfile $returnDirectory/stuCommon \
-    --flip $returnDirectory/stuSnpToFlip.txt \
+plink --bfile stuCommon \
+    --flip stuSnpToFlip.txt \
     --make-bed \
-    --out $returnDirectory/stuFlipped
+    --out stuFlipped
     
 #reorder snps so that Allele1 is always A
 Rscript $pathToRepo/snpToReOrder.R $returnDirectory
 
-plink --bfile $returnDirectory/refFlipped \
-    --a1-allele $returnDirectory/refReOrder.txt 2 1 \
+plink --bfile refFlipped \
+    --a1-allele refReOrder.txt 2 1 \
     --make-bed \
-    --out $returnDirectory/refReady
+    --out refReady
     
-plink --bfile $returnDirectory/stuFlipped \
-    --a1-allele $returnDirectory/stuReOrder.txt 2 1 \
+plink --bfile stuFlipped \
+    --a1-allele stuReOrder.txt 2 1 \
     --make-bed \
-    --out $returnDirectory/stuReady
+    --out stuReady
     
 #rename SNPs so that the names are consistent between data sets
 Rscript $pathToRepo/snpRename.R $returnDirectory
 
 #merge datasets
-plink --bfile $returnDirectory/refReady \
-    --bmerge $returnDirectory/stuReady \
+plink --bfile refReady \
+    --bmerge stuReady \
     --make-bed \
     --allow-no-sex \
-    --out $returnDirectory/allData
+    --out allData
     
 #find non bi allelic SNPs
 Rscript $pathToRepo/snpNonBiAllelic.R $returnDirectory
 
 #remove non bi allelic SNPs
 #and also remove SNPs with high missingness too
-plink --bfile $returnDirectory/allData \
-    --exclude $returnDirectory/nonBiAllelicSnps.txt \
+plink --bfile allData \
+    --exclude nonBiAllelicSnps.txt \
 #    --geno 0.05 \
     --make-bed \
-    --out $returnDirectory/allDataBiAllelic
+    --out allDataBiAllelic
     
 #perform PCA
-plink --bfile $returnDirectory/allDataBiAllelic \
+plink --bfile allDataBiAllelic \
     --pca \
-    --out $returnDirectory/pcaResult
+    --out pcaResult
 
 #perform UMAP directly on genotype data
 Rscript $pathToRepo/umapOnBigData.R $returnDirectory
 
 #Deleting files not needed anymore
-
-cd $returnDirectory
 
 rm allData.*
 rm common*Snps.txt
