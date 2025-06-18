@@ -19,7 +19,6 @@ rfMixResults=$6
 #make return directory if it doesn't exist
 mkdir -p $returnDirectory
 
-cd /scratch.global/GDCtraining/lamin022/abstractDataCleaning
 module load plink
 module load R/4.4.0-openblas-rocky8
 
@@ -109,3 +108,18 @@ plink --bfile $returnDirectory/allDataBiAllelic \
 
 #perform UMAP directly on genotype data
 Rscript $pathToRepo/umapOnBigData.R $returnDirectory
+
+#Deleting files not needed anymore
+rm $returnDirectory/allData.*
+rm $returnDirectory/common*Snps.txt
+rm $returnDirectory/nonBiAllelicSnps.txt
+rm $returnDirectory/refCommon.*
+rm $returnDirectory/refFlipped.*
+rm $returnDirectory/refPanel.*
+rm $returnDirectory/refReOrder.txt
+rm $returnDirectory/refSnpToFlip.txt
+rm $returnDirectory/stuCommon.*
+rm $returnDirectory/stuFlipped.*
+rm $returnDirectory/stuReOrder.txt
+rm $returnDirectory/stuSample.*
+rm $returnDirectory/stuSnpToFlip.txt
