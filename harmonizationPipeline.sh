@@ -99,7 +99,6 @@ Rscript $pathToRepo/snpNonBiAllelic.R $returnDirectory
 #and also remove SNPs with high missingness too
 plink --bfile allData \
     --exclude nonBiAllelicSnps.txt \
-#    --geno 0.05 \
     --make-bed \
     --out allDataBiAllelic
     
