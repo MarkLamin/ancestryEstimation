@@ -1,6 +1,6 @@
-library(data.table)
+library(data.table) |> suppressPackageStartupMessages()
 library(magrittr)
-library(tidyverse, warn.conflicts = FALSE)
+library(tidyverse) |> suppressPackageStartupMessages()
 
 #set working directory to be user entered
 #setwd("/scratch.global/GDCtraining/lamin022/abstractDataCleaning/")

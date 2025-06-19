@@ -1,4 +1,4 @@
-library(data.table)
+library(data.table) |> suppressPackageStartupMessages()
 library(magrittr)
 library(tidyverse) |> suppressPackageStartupMessages()
 

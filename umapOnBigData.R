@@ -2,9 +2,9 @@
 library(KRIS)
 
 #for data wrangling
-library(data.table)
+library(data.table) |> suppressPackageStartupMessages()
 library(magrittr)
-library(tidyverse, warn.conflicts = FALSE)
+library(tidyverse) |> suppressPackageStartupMessages()
 
 #for dimensional reduction
 library(uwot)

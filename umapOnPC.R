@@ -1,7 +1,7 @@
 library(uwot)
-library(tidyverse, warn.conflicts = FALSE)
+library(data.table) |> suppressPackageStartupMessages()
 library(magrittr)
-library(data.table)
+library(tidyverse) |> suppressPackageStartupMessages()
 
 setwd(commandArgs(trailingOnly = TRUE))
 
