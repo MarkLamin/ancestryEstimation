@@ -4,7 +4,7 @@ library(KRIS)
 #for data wrangling
 library(data.table)
 library(magrittr)
-library(tidyverse)
+library(tidyverse, warn.conflicts = FALSE)
 
 #for dimensional reduction
 library(uwot)

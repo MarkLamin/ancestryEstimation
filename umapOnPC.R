@@ -1,5 +1,5 @@
 library(uwot)
-library(tidyverse)
+library(tidyverse, warn.conflicts = FALSE)
 library(magrittr)
 library(data.table)
 

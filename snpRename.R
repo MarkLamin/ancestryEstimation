@@ -1,6 +1,6 @@
 library(data.table)
 library(magrittr)
-library(tidyverse)
+library(tidyverse, warn.conflicts = FALSE)
 
 #set working directory to be user entered
 #setwd("/scratch.global/GDCtraining/lamin022/abstractDataCleaning/")
