@@ -109,6 +109,9 @@ plink --bfile allDataBiAllelic \
 #perform UMAP directly on genotype data
 Rscript $pathToRepo/umapOnBigData.R $returnDirectory
 
+#copy shiny app template
+cp -r $pathToRepo/shinyAppFile $returnDirectory
+
 #Deleting files not needed anymore
 
 rm allData.*
