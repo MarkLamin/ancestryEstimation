@@ -20,7 +20,7 @@ library(tidyverse)
 library(shiny)
 library(DT)
 
-popLabels <- fread("../PopLabels.txt", header = F) |>
+popLabels <- fread("PopLabels.txt", header = F) |>
   set_colnames(c("SampleID", "Region")) 
 
 pcTable <- fread("../pcaResult.eigenvec") |>
