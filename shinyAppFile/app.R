@@ -41,25 +41,6 @@ PC_RF_Test <- pcTable |>
   filter(is.na(Region)) |>
   column_to_rownames("SampleID")
 
-PC_UMAP_Table <- fread("../umapOnPC.csv") |>
-  set_colnames(c("SampleID", "UMAP1", "UMAP2")) |>
-  left_join(y = popLabels, by = "SampleID") |>
-  mutate(trainingPopLabel = if_else(
-    condition = is.na(Region),
-    true = "Missing",
-    false = Region
-  ))
-
-PC_UMAP_Train <- PC_UMAP_Table |>
-  filter(is.na(Region) |> not()) |>
-  column_to_rownames("SampleID") |>
-  select(-trainingPopLabel)
-
-PC_UMAP_Test <- PC_UMAP_Table |>
-  filter(is.na(Region)) |>
-  column_to_rownames("SampleID") |>
-  select(starts_with("UMAP"))
-
 #title is long, so I put it as a separate thing
 eigValPlotTitle <-
   "Contribution of Successive Principal Components to Variance Explained"
@@ -187,8 +168,8 @@ ui <- fluidPage(
           checkboxGroupInput(
             inputId = "PC_UMAP_Regions",
             label = "Regions",
-            choices = PC_UMAP_Table |> with(trainingPopLabel) |> unique(),
-            selected = PC_UMAP_Table |> with(trainingPopLabel) |> unique()
+            choices = pcTable |> with(trainingPopLabel) |> unique(),
+            selected = pcTable |> with(trainingPopLabel) |> unique()
           ),
           sliderInput(
             inputId = "PC_UMAP_KNN",
