@@ -111,8 +111,8 @@ Rscript $pathToRepo/umapOnBigData.R $returnDirectory
 
 #copy shiny app template
 cp -r $pathToRepo/shinyAppFile $returnDirectory
-cp $popLabels $pathToRepo/shinyAppFile/PopLabels.txt
-cp $rfMixResults $pathToRepo/shinyAppFile/RFMixResults.csv
+cp $popLabels $returnDirectory/shinyAppFile/PopLabels.txt
+cp $rfMixResults $returnDirectory/shinyAppFile/RFMixResults.csv
 
 #Deleting files not needed anymore
 
