@@ -47,11 +47,13 @@ Rscript $pathToRepo/commonSNP.R $returnDirectory
 #filter datasets to only contain common snps
 plink --bfile refPanel \
     --extract commonRefSnps.txt \
+    --allow-no-sex \
     --make-bed \
     --out refCommon
     
 plink --bfile stuSample \
     --extract commonStuSnps.txt \
+    --allow-no-sex \
     --make-bed \
     --out stuCommon
     
@@ -61,11 +63,13 @@ Rscript $pathToRepo/snpToFlip.R $returnDirectory
 #flip strands on indicated SNPs
 plink --bfile refCommon \
     --flip refSnpToFlip.txt \
+    --allow-no-sex \
     --make-bed \
     --out refFlipped
     
 plink --bfile stuCommon \
     --flip stuSnpToFlip.txt \
+    --allow-no-sex \
     --make-bed \
     --out stuFlipped
     
@@ -74,11 +78,13 @@ Rscript $pathToRepo/snpToReOrder.R $returnDirectory
 
 plink --bfile refFlipped \
     --a1-allele refReOrder.txt 2 1 \
+    --allow-no-sex \
     --make-bed \
     --out refReady
     
 plink --bfile stuFlipped \
     --a1-allele stuReOrder.txt 2 1 \
+    --allow-no-sex \
     --make-bed \
     --out stuReady
     
@@ -98,6 +104,7 @@ Rscript $pathToRepo/snpNonBiAllelic.R $returnDirectory
 #remove non bi allelic SNPs
 plink --bfile allData \
     --exclude nonBiAllelicSnps.txt \
+    --allow-no-sex \
     --make-bed \
     --out allDataBiAllelic
     
