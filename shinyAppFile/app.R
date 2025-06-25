@@ -20,6 +20,9 @@ library(tidyverse)
 library(shiny)
 library(DT)
 
+#visual aesthetics
+library(ghibli)
+
 popLabels <- fread("PopLabels.txt", header = F) |>
   set_colnames(c("SampleID", "Region"))
 
@@ -29,7 +32,7 @@ pcTable <- fread("../pcaResult.eigenvec") |>
   left_join(y = popLabels, by = "SampleID") |>
   mutate(trainingPopLabel = if_else(
     condition = is.na(Region),
-    true = "Missing",
+    true = "Study Sample",
     false = Region
   ))
 
@@ -50,8 +53,6 @@ UMAP_Table <- fread("../bigUmapResults.csv")[, 2:3] |>
     false = Region
   ))
 
-ggplot(data = UMAP_Table, mapping = aes(x = V1, y = V2, color = Region)) + geom_point(size = 3) + theme_bw()
-
 #title is long, so I put it as a separate thing
 eigValPlotTitle <-
   "Contribution of Successive Principal Components to Variance Explained"
@@ -70,7 +71,7 @@ eigValPlot <- fread("../pcaResult.eigenval") %>%
     subtitle = "(User-Specified Threshold in Red)"
   )
 
-# Define UI for application that draws a histogram
+# Define UI for application
 ui <- fluidPage(
   # Application title
   titlePanel("Ancestry Estimation"),
@@ -288,13 +289,12 @@ ui <- fluidPage(
     ),
     # Tab 7: PC + RF vs. PC + UMAP + RF ----
     tabPanel(
-      title = "PC + RF vs. PC + UMAP + RF",
+      title = "Method Comparison",
       sidebarLayout(
         sidebarPanel = sidebarPanel(),
         mainPanel = mainPanel(
-          h3("Samples for which the Methods Disagree"),
           DTOutput("PC_RF_VS_PC_UMAP_RF"),
-          tableOutput("PC_RF_VS_PC_UMAP_RF_CrossTable")
+          verbatimTextOutput("PC_RF_VS_PC_UMAP_RF_CrossTable")
         )
       )
     )
@@ -302,7 +302,7 @@ ui <- fluidPage(
   )
 )
 
-# Define server logic required to draw a histogram
+# Define server logic
 server <- function(input, output) {
   #Tab 1: PCA -----
   output$varianceExplained <- renderPlot({
@@ -326,7 +326,10 @@ server <- function(input, output) {
       ) +
         geom_point(size = 3) +
         theme_bw() +
-        labs(title = "Principal Component Analysis on Reference Panel and Study Sample")
+        labs(title = "Principal Component Analysis on Reference Panel and Study Sample") +
+        scale_color_brewer(palette = "Dark2", na.value = "grey40") +
+        theme(legend.text = element_text(size = 14),
+              legend.title = element_text(size = 14))
     })
   
   #Tab 2: PC + RF -----
@@ -395,21 +398,23 @@ server <- function(input, output) {
     renderPlot({
       ggplot(
         data = PC_RF_Predictions(),
-        mapping = aes(
-          x = confidentRegion,
-          color = confidentRegion,
-          fill = confidentRegion
-        )
+        mapping = aes(x = confidentRegion,
+                      color = confidentRegion,
+                      fill = confidentRegion)
       ) +
         geom_bar() +
         theme_bw() +
         labs(
           x = "Region",
-          title = "Predicted Regions on SMILES Data",
+          title = "Predicted Regions on Study Sample Data",
           color = "Region",
           fill = "Region",
           subtitle = paste0("Confidence Threshold of ", input$PC_RF_Threshold)
-        )
+        ) +
+        scale_color_brewer(palette = "Dark2", na.value = "grey40") +
+        scale_fill_brewer(palette = "Dark2", na.value = "grey40") +
+        theme(legend.text = element_text(size = 14),
+              legend.title = element_text(size = 14))
     })
   
   output$PC_RF_Assignments_With_PC <-
@@ -419,10 +424,13 @@ server <- function(input, output) {
         geom_point(size = 3) +
         theme_bw() +
         labs(
-          title = "SMILES Data with Principal Components and Predicted Regions",
+          title = "Study Sample Data with Principal Components and Predicted Regions",
           color = "Region",
           subtitle = paste0("Confidence Threshold of ", input$PC_RF_Threshold)
-        )
+        ) +
+        scale_color_brewer(palette = "Dark2", na.value = "grey40") +
+        theme(legend.text = element_text(size = 14),
+              legend.title = element_text(size = 14))
     })
   
   output$PC_RF_TrainingError <-
@@ -474,7 +482,26 @@ server <- function(input, output) {
       )
     ) +
       geom_bar(stat = "identity") +
-      theme_bw()
+      theme_bw() +
+      theme(axis.text.x = element_text(
+        angle = 90,
+        vjust = 0.5,
+        hjust = 1
+      )) +
+      labs(
+        x = "Sample",
+        y = "Ancestral Decomposition",
+        title = paste0(
+          "Local Ancestry Estimation of Samples Predicted as ",
+          input$PC_RF_RFMixSelectRegion
+        )
+      ) +
+      scale_color_brewer(palette = "Dark2", na.value = "grey40") +
+      scale_fill_brewer(palette = "Dark2", na.value = "grey40") +
+      theme(
+        legend.text = element_text(size = 14),
+        legend.title = element_text(size = 14)
+      )
   })
   
   #Tab 3: UMAP ----
@@ -486,7 +513,10 @@ server <- function(input, output) {
       ) +
         geom_point(size = 3) +
         theme_bw() +
-        labs(x = "UMAP1", y = "UMAP2", title = "UMAP on Reference Panel and Study Sample Genotypes")
+        labs(x = "UMAP1", y = "UMAP2", title = "UMAP on Reference Panel and Study Sample Genotypes") +
+        scale_color_brewer(palette = "Dark2", na.value = "grey40") +
+        theme(legend.text = element_text(size = 14),
+              legend.title = element_text(size = 14))
     })
   #Tab 4: UMAP + RF ----
   #Tab 5: UMAP + PCA ----
@@ -509,7 +539,7 @@ server <- function(input, output) {
         #select(-Population) |>
         mutate(trainingPopLabel = if_else(
           condition = is.na(Region),
-          true = "Missing",
+          true = "Study Sample",
           false = Region
         ))
       
@@ -524,7 +554,10 @@ server <- function(input, output) {
       ) +
         geom_point(size = 3) +
         theme_bw() +
-        labs(title = "UMAP Coordinates on Principal Components of Reference Panel + Study Sample")
+        labs(title = "UMAP Coordinates on Principal Components of Reference Panel + Study Sample") +
+        scale_color_brewer(palette = "Dark2", na.value = "grey40") +
+        theme(legend.text = element_text(size = 14),
+              legend.title = element_text(size = 14))
     })
   
   #Tab 6: PC + UMAP + RF ----
@@ -611,7 +644,18 @@ server <- function(input, output) {
         )
       ) +
         geom_bar() +
-        theme_bw()
+        theme_bw() +
+        labs(
+          x = "Region",
+          color = "Region",
+          fill = "Region",
+          title = "Predicted Regions on Study Sample Data",
+          subtitle = paste0("Confidence Threshold of ", input$PC_UMAP_RF_Threshold)
+        ) +
+        scale_color_brewer(palette = "Dark2", na.value = "grey40") +
+        scale_fill_brewer(palette = "Dark2", na.value = "grey40") +
+        theme(legend.text = element_text(size = 14),
+              legend.title = element_text(size = 14))
     })
   
   output$prepTable <- renderDT(PC_UMAP_RF_Predictions())
@@ -660,7 +704,23 @@ server <- function(input, output) {
       ) +
         geom_bar(stat = "identity") +
         theme_bw() +
-        labs(title = "RFMix Output of Samples from Selected Predicted Region")
+        labs(
+          title = paste0(
+            "Local Ancestry Estimation of Samples Predicted as ",
+            input$PC_UMAP_RF_RFMixRegionSelect
+          )
+        ) +
+        scale_color_brewer(palette = "Dark2", na.value = "grey40") +
+        scale_fill_brewer(palette = "Dark2", na.value = "grey40") +
+        theme(
+          legend.text = element_text(size = 14),
+          legend.title = element_text(size = 14),
+          axis.text.x = element_text(
+            angle = 90,
+            vjust = 0.5,
+            hjust = 1
+          )
+        )
     })
   #Tab 7: PC + RF vs. PC + UMAP + RF ----
   #PC_UMAP_RF_Predictions
@@ -672,8 +732,7 @@ server <- function(input, output) {
       y = PC_UMAP_RF_Predictions() |>
         select(SampleID, "PC_UMAP_RandomForestPrediction" = predictedClass),
       by = "SampleID"
-    ) |>
-      filter(PC_RandomForestPrediction != PC_UMAP_RandomForestPrediction)
+    ) 
   })
   
   output$PC_RF_VS_PC_UMAP_RF <- renderDT({
@@ -681,11 +740,12 @@ server <- function(input, output) {
   })
   
   output$PC_RF_VS_PC_UMAP_RF_CrossTable <-
-    renderTable({
+    renderPrint({
       table(
-        PC_VS_PC_UMAP_comparisonDF() |> with(PC_RandomForestPrediction),
-        PC_VS_PC_UMAP_comparisonDF() |> with(PC_UMAP_RandomForestPrediction)
-      )
+        PC_RF = PC_VS_PC_UMAP_comparisonDF() |> with(PC_RandomForestPrediction),
+        PC_RF_UMAP = PC_VS_PC_UMAP_comparisonDF() |> with(PC_UMAP_RandomForestPrediction)
+      ) |> 
+        ftable()
     })
 }
 
