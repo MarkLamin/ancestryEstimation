@@ -21,7 +21,7 @@ library(shiny)
 library(DT)
 
 popLabels <- fread("PopLabels.txt", header = F) |>
-  set_colnames(c("SampleID", "Region")) 
+  set_colnames(c("SampleID", "Region"))
 
 pcTable <- fread("../pcaResult.eigenvec") |>
   select(-V1) |>
@@ -40,6 +40,17 @@ PC_RF_Train <- pcTable |>
 PC_RF_Test <- pcTable |>
   filter(is.na(Region)) |>
   column_to_rownames("SampleID")
+
+UMAP_Table <- fread("../bigUmapResults.csv")[, 2:3] |>
+  mutate(SampleID = pcTable$SampleID) |>
+  left_join(y = popLabels, by = "SampleID") |>
+  mutate(trainingLabel = if_else(
+    condition = is.na(Region),
+    true = "Study Sample",
+    false = Region
+  ))
+
+ggplot(data = UMAP_Table, mapping = aes(x = V1, y = V2, color = Region)) + geom_point(size = 3) + theme_bw()
 
 #title is long, so I put it as a separate thing
 eigValPlotTitle <-
@@ -63,8 +74,8 @@ eigValPlot <- fread("../pcaResult.eigenval") %>%
 ui <- fluidPage(
   # Application title
   titlePanel("Ancestry Estimation"),
-  #Tab 1: PCA ----
   tabsetPanel(
+    #Tab 1: PCA ----
     tabPanel(
       title = "PCA",
       # Sidebar with a slider input for number of PCs
@@ -156,7 +167,20 @@ ui <- fluidPage(
       )
     ),
     # Tab 3: UMAP ----
-    tabPanel(title = "UMAP"),
+    tabPanel(
+      title = "UMAP",
+      sidebarLayout(
+        sidebarPanel = sidebarPanel(
+          checkboxGroupInput(
+            inputId = "UMAP_Regions",
+            label = "Regions",
+            choices = UMAP_Table$trainingLabel |> unique(),
+            selected = UMAP_Table$trainingLabel |> unique()
+          )
+        ),
+        mainPanel = mainPanel(plotOutput("UMAP_Plot"))
+      )
+    ),
     #Tab 4: UMAP + RF ----
     tabPanel(title = "UMAP + Random Forest"),
     #Tab 5: PCA + UMAP ----
@@ -256,10 +280,25 @@ ui <- fluidPage(
           h3("Comparison to RFMix"),
           uiOutput("PC_UMAP_RF_RFMixRegion")
         ),
-        mainPanel = mainPanel(plotOutput("PC_UMAP_RF_Prediction_Plot"),
-                              plotOutput("PC_UMAP_RF_RFMixPlot"))
+        mainPanel = mainPanel(
+          plotOutput("PC_UMAP_RF_Prediction_Plot"),
+          plotOutput("PC_UMAP_RF_RFMixPlot")
+        )
       )
-    ) #end of UI ----
+    ),
+    # Tab 7: PC + RF vs. PC + UMAP + RF ----
+    tabPanel(
+      title = "PC + RF vs. PC + UMAP + RF",
+      sidebarLayout(
+        sidebarPanel = sidebarPanel(),
+        mainPanel = mainPanel(
+          h3("Samples for which the Methods Disagree"),
+          DTOutput("PC_RF_VS_PC_UMAP_RF"),
+          tableOutput("PC_RF_VS_PC_UMAP_RF_CrossTable")
+        )
+      )
+    )
+    #end of UI ----
   )
 )
 
@@ -366,7 +405,7 @@ server <- function(input, output) {
         theme_bw() +
         labs(
           x = "Region",
-          title = "Predicted Regions on Study Sample Data",
+          title = "Predicted Regions on SMILES Data",
           color = "Region",
           fill = "Region",
           subtitle = paste0("Confidence Threshold of ", input$PC_RF_Threshold)
@@ -380,7 +419,7 @@ server <- function(input, output) {
         geom_point(size = 3) +
         theme_bw() +
         labs(
-          title = "Study Sample Data with Principal Components and Predicted Regions",
+          title = "SMILES Data with Principal Components and Predicted Regions",
           color = "Region",
           subtitle = paste0("Confidence Threshold of ", input$PC_RF_Threshold)
         )
@@ -408,7 +447,7 @@ server <- function(input, output) {
   PC_RF_IDsForRFMix <-
     reactive({
       PC_RF_Predictions() |>
-        filter(confidentRegion == input$PC_RF_RFMixSelectRegion) |> 
+        filter(confidentRegion == input$PC_RF_RFMixSelectRegion) |>
         with(SampleID)
     })
   
@@ -417,8 +456,8 @@ server <- function(input, output) {
       filter(SampleID %in% PC_RF_IDsForRFMix()) |>
       pivot_wider(id_cols = "SampleID",
                   names_from = "Region",
-                  values_from = "Probability") |> 
-      mutate(SampleID = fct_reorder(factor(SampleID), SAS)) |> 
+                  values_from = "Probability") |>
+      mutate(SampleID = fct_reorder(factor(SampleID), SAS)) |>
       pivot_longer(cols = -SampleID,
                    names_to = "Region",
                    values_to = "Probability")
@@ -439,6 +478,16 @@ server <- function(input, output) {
   })
   
   #Tab 3: UMAP ----
+  output$UMAP_Plot <-
+    renderPlot({
+      ggplot(
+        data = UMAP_Table |> filter(trainingLabel %in% input$UMAP_Regions),
+        mapping = aes(x = V1, y = V2, color = Region)
+      ) +
+        geom_point(size = 3) +
+        theme_bw() +
+        labs(x = "UMAP1", y = "UMAP2", title = "UMAP on Reference Panel and Study Sample Genotypes")
+    })
   #Tab 4: UMAP + RF ----
   #Tab 5: UMAP + PCA ----
   
@@ -446,7 +495,7 @@ server <- function(input, output) {
     reactive({
       pcTable |>
         column_to_rownames("SampleID") |>
-        select(-Region, -trainingPopLabel) |>
+        select(-Region,-trainingPopLabel) |>
         scale() |>
         umap(
           n_threads = 4,
@@ -482,7 +531,7 @@ server <- function(input, output) {
   PC_UMAP_RF_Prep <- reactive({
     pcTable |>
       column_to_rownames("SampleID") |>
-      select(-Region,-trainingPopLabel) |>
+      select(-Region, -trainingPopLabel) |>
       scale() |>
       umap(
         n_threads = 4,
@@ -542,11 +591,13 @@ server <- function(input, output) {
         slice_max(order_by = Probability,
                   by = SampleID,
                   with_ties = FALSE) |>
-        mutate(predictedClass = if_else(
-          condition = Probability >= input$PC_UMAP_RF_Threshold,
-          true = Region,
-          false = "Other"
-        ))
+        mutate(
+          predictedClass = if_else(
+            condition = Probability >= input$PC_UMAP_RF_Threshold,
+            true = Region,
+            false = "Other"
+          )
+        )
     })
   
   output$PC_UMAP_RF_Prediction_Plot <-
@@ -580,7 +631,7 @@ server <- function(input, output) {
   PC_UMAP_RF_IDsForRFMix <-
     reactive({
       PC_UMAP_RF_Predictions() |>
-        filter(predictedClass == input$PC_UMAP_RF_RFMixRegionSelect) |> 
+        filter(predictedClass == input$PC_UMAP_RF_RFMixRegionSelect) |>
         with(SampleID)
     })
   
@@ -610,6 +661,31 @@ server <- function(input, output) {
         geom_bar(stat = "identity") +
         theme_bw() +
         labs(title = "RFMix Output of Samples from Selected Predicted Region")
+    })
+  #Tab 7: PC + RF vs. PC + UMAP + RF ----
+  #PC_UMAP_RF_Predictions
+  
+  PC_VS_PC_UMAP_comparisonDF <- reactive({
+    inner_join(
+      x = PC_RF_Predictions() |>
+        select(SampleID, "PC_RandomForestPrediction" = confidentRegion),
+      y = PC_UMAP_RF_Predictions() |>
+        select(SampleID, "PC_UMAP_RandomForestPrediction" = predictedClass),
+      by = "SampleID"
+    ) |>
+      filter(PC_RandomForestPrediction != PC_UMAP_RandomForestPrediction)
+  })
+  
+  output$PC_RF_VS_PC_UMAP_RF <- renderDT({
+    PC_VS_PC_UMAP_comparisonDF()
+  })
+  
+  output$PC_RF_VS_PC_UMAP_RF_CrossTable <-
+    renderTable({
+      table(
+        PC_VS_PC_UMAP_comparisonDF() |> with(PC_RandomForestPrediction),
+        PC_VS_PC_UMAP_comparisonDF() |> with(PC_UMAP_RandomForestPrediction)
+      )
     })
 }
 
