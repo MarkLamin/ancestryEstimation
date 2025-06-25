@@ -259,7 +259,7 @@ ui <- fluidPage(
         mainPanel = mainPanel(plotOutput("PC_UMAP_RF_Prediction_Plot"),
                               plotOutput("PC_UMAP_RF_RFMixPlot"))
       )
-    )
+    ) #end of UI ----
   )
 )
 
