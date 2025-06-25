@@ -366,7 +366,7 @@ server <- function(input, output) {
         theme_bw() +
         labs(
           x = "Region",
-          title = "Predicted Regions on SMILES Data",
+          title = "Predicted Regions on Study Sample Data",
           color = "Region",
           fill = "Region",
           subtitle = paste0("Confidence Threshold of ", input$PC_RF_Threshold)
@@ -380,7 +380,7 @@ server <- function(input, output) {
         geom_point(size = 3) +
         theme_bw() +
         labs(
-          title = "SMILES Data with Principal Components and Predicted Regions",
+          title = "Study Sample Data with Principal Components and Predicted Regions",
           color = "Region",
           subtitle = paste0("Confidence Threshold of ", input$PC_RF_Threshold)
         )
