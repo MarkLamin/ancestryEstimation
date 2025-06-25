@@ -1,2 +1,13 @@
 # ancestryEstimation
 Comparison of global ancestry estimation techniques for highly-admixed populations. Research conducted by Mark Lamin under the supervision of Saonli Basu, PhD. 
+
+## How it works
+
+The main file of interest is `harmonizationPipeline.sh`. This is a slurm script that allows the user to input their desired reference panel and study sample, and the script will then create a shiny app from a template that compares multiple ancestry estimation methods on the data. The script takes the following arguments:
+
+1) `referencePanel` -- The reference panel. It is formatted as a prefix to a plink bfile triplet (i.e., `.bed`, `.bim`, `.fam`). It is assumed that the genome reference is GRCh38, that there are unique SNP names (i.e., every entry in column two of the `.bim` file is unique), and that typical quality control has already been done.
+2) `studySample` -- The study sample. It is formatted as a prefix to a plink bfile triplet (i.e., `.bed`, `.bim`, `.fam`). It is assumed that the genome reference is GRCh38, that there are unique SNP names (i.e., every entry in column two of the `.bim` file is unique), and that typical quality control has already been done. Note that the SNP name formats do not need to be the same between the reference panel and the study sample as the pipeline will harmonize and rename the SNPs accordingly.
+3) `returnDirectory` -- The directory where the outputs and shiny app will be stored. The pipeline will create the directory if it doesn't already exist.
+4) `pathToRepo` -- The directory that contains the github repository.
+5) `popLabels` -- The population labels for the reference panel. This will be loaded into the shiny app as a dataframe. The first column is assumed to match the sample ids in the .fam file of the reference panel. The second column is the population to which the sample id belongs.
+6) `rfMixResults` -- (Optional) A file that contains aggregated local ancestry estimation results. It contains one row per sample, where the sample ids are assumed to be the same as the study sample's `.fam` file. The other columns are the posterior probabilites for each population. The population labels in this file need not be the same as in `popLabels`. 
