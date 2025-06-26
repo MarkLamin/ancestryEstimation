@@ -108,6 +108,18 @@ plink --bfile allData \
     --make-bed \
     --out allDataBiAllelic
     
+plink --bfile refReady \
+    --exclude nonBiAllelicSnps.txt \
+    --allow-no-sex \
+    --make-bed \
+    --out refReady
+    
+plink --bfile stuReady \
+    --exclude nonBiAllelicSnps.txt \
+    --allow-no-sex \
+    --make-bed \
+    --out stuReady
+    
 #perform PCA
 plink --bfile allDataBiAllelic \
     --pca \
