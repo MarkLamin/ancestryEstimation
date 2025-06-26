@@ -41,6 +41,9 @@ plink --bfile $studySample \
     --make-bed \
     --out stuSample
     
+#create IDs for each SNP
+Rscript $pathToRepo/snpCreateNames.R $returnDirectory
+    
 #find SNPs that are common between each data set
 Rscript $pathToRepo/commonSNP.R $returnDirectory
 
