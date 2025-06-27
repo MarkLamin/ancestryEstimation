@@ -115,13 +115,13 @@ plink --bfile refReady \
     --exclude nonBiAllelicSnps.txt \
     --allow-no-sex \
     --make-bed \
-    --out refReady
+    --out refReadyBiAllelic
     
 plink --bfile stuReady \
     --exclude nonBiAllelicSnps.txt \
     --allow-no-sex \
     --make-bed \
-    --out stuReady
+    --out stuReadyBiAllelic
     
 #perform PCA
 plink --bfile allDataBiAllelic \

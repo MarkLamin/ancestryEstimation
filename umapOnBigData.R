@@ -22,8 +22,8 @@ dimensionSize <- 2
 
 bedObject |>
   with(snp) |>
-  set_rownames(bedObject$ind.info$IndID)
-impute_mean() |>
+  set_rownames(bedObject$ind.info$IndID) |>
+  impute_mean() |>
   scale() |>
   uwot::umap(n_threads = 10,
              n_components = dimensionSize,
