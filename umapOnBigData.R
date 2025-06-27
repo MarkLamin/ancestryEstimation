@@ -14,12 +14,20 @@ library(missMethods) |> suppressPackageStartupMessages()
 
 setwd(commandArgs(trailingOnly = TRUE))
 
-read.bed(bed = "allDataBiAllelic.bed",
-         bim = "allDataBiAllelic.bim",
-         fam = "allDataBiAllelic.fam") |>
+bedObject <- read.bed(bed = "allDataBiAllelic.bed",
+                      bim = "allDataBiAllelic.bim",
+                      fam = "allDataBiAllelic.fam")
+
+dimensionSize <- 2
+
+bedObject |>
   with(snp) |>
-  impute_mean() |>
+  set_rownames(bedObject$ind.info$IndID)
+impute_mean() |>
   scale() |>
-  uwot::umap(n_threads = 4) |>
+  uwot::umap(n_threads = 4,
+             n_components = dimensionSize,
+             n_neighbors = 30) |>
+  set_colnames(paste0("UMAP", 1:dimensionSize)) |>
   fwrite(file = "bigUmapResults.csv",
          row.names = TRUE)
