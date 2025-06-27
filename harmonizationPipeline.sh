@@ -125,6 +125,7 @@ plink --bfile stuReady \
     
 #perform PCA
 plink --bfile allDataBiAllelic \
+    --allow-no-sex \
     --pca \
     --out pcaResult
 
