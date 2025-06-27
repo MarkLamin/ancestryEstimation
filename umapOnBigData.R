@@ -1,5 +1,5 @@
 #for reading genotype data
-library(KRIS)
+library(KRIS) |> suppressPackageStartupMessages()
 
 #for data wrangling
 library(data.table) |> suppressPackageStartupMessages()
@@ -10,7 +10,7 @@ library(tidyverse) |> suppressPackageStartupMessages()
 library(uwot) |> suppressPackageStartupMessages()
 
 #for imputation
-library(missMethods)
+library(missMethods) |> suppressPackageStartupMessages()
 
 setwd(commandArgs(trailingOnly = TRUE))
 
