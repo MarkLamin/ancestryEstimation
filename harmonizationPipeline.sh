@@ -152,3 +152,5 @@ rm stuFlipped.*
 rm stuReOrder.txt
 rm stuSample.*
 rm stuSnpToFlip.txt
+rm refReady.*
+rm stuReady.*
