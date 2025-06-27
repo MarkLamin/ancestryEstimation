@@ -21,7 +21,7 @@ library(shiny)
 library(DT)
 
 #visual aesthetics
-library(ghibli)
+library(RColorBrewer)
 
 popLabels <- fread("PopLabels.txt", header = F) |>
   set_colnames(c("SampleID", "Region"))
