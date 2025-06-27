@@ -25,7 +25,7 @@ bedObject |>
   set_rownames(bedObject$ind.info$IndID)
 impute_mean() |>
   scale() |>
-  uwot::umap(n_threads = 4,
+  uwot::umap(n_threads = 10,
              n_components = dimensionSize,
              n_neighbors = 30) |>
   set_colnames(paste0("UMAP", 1:dimensionSize)) |>
