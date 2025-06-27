@@ -7,7 +7,7 @@ library(magrittr)
 library(tidyverse) |> suppressPackageStartupMessages()
 
 #for dimensional reduction
-library(uwot)
+library(uwot) |> suppressPackageStartupMessages()
 
 #for imputation
 library(missMethods)
