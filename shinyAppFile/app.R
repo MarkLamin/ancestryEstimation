@@ -44,8 +44,8 @@ PC_RF_Test <- pcTable |>
   filter(is.na(Region)) |>
   column_to_rownames("SampleID")
 
-UMAP_Table <- fread("../bigUmapResults.csv")[, 2:3] |>
-  mutate(SampleID = pcTable$SampleID) |>
+UMAP_Table <- fread("../bigUmapResults.csv") |>
+  set_colnames(c("SampleID", "UMAP1", "UMAP2")) |> 
   left_join(y = popLabels, by = "SampleID") |>
   mutate(trainingLabel = if_else(
     condition = is.na(Region),
@@ -509,7 +509,7 @@ server <- function(input, output) {
     renderPlot({
       ggplot(
         data = UMAP_Table |> filter(trainingLabel %in% input$UMAP_Regions),
-        mapping = aes(x = V1, y = V2, color = Region)
+        mapping = aes(x = UMAP1, y = UMAP2, color = Region)
       ) +
         geom_point(size = 3) +
         theme_bw() +
