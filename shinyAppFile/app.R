@@ -44,8 +44,8 @@ PC_RF_Test <- pcTable |>
   filter(is.na(Region)) |>
   column_to_rownames("SampleID")
 
-UMAP_Table <- fread("../bigUmapResults.csv") |>
-  set_colnames(c("SampleID", "UMAP1", "UMAP2")) |> 
+UMAP_Table <- fread("../bigUmapResults.csv")[, 2:3] |>
+  mutate(SampleID = pcTable$SampleID) |>
   left_join(y = popLabels, by = "SampleID") |>
   mutate(trainingLabel = if_else(
     condition = is.na(Region),
@@ -158,7 +158,12 @@ ui <- fluidPage(
             value = 0.9
           ),
           h3("RFMix Results"),
-          uiOutput("PC_RF_RFMix_Region")
+          uiOutput("PC_RF_RFMix_Region"),
+          selectInput(
+            inputId = "PC_RF_RFMixSort",
+            label = "Sort by",
+            choices = fread("RFMixResults.csv") |> with(Region) |> unique()
+          )
         ),
         mainPanel = mainPanel(
           plotOutput("PC_RF_Assignments"),
@@ -279,7 +284,12 @@ ui <- fluidPage(
             value = 0.9
           ),
           h3("Comparison to RFMix"),
-          uiOutput("PC_UMAP_RF_RFMixRegion")
+          uiOutput("PC_UMAP_RF_RFMixRegion"),
+          selectInput(
+            inputId = "PC_UMAP_RF_RFMixSort",
+            label = "Sort by:",
+            choices = fread("RFMixResults.csv") |> with(Region) |> unique()
+          )
         ),
         mainPanel = mainPanel(
           plotOutput("PC_UMAP_RF_Prediction_Plot"),
@@ -465,7 +475,7 @@ server <- function(input, output) {
       pivot_wider(id_cols = "SampleID",
                   names_from = "Region",
                   values_from = "Probability") |>
-      mutate(SampleID = fct_reorder(factor(SampleID), SAS)) |>
+      mutate(SampleID = fct_reorder(factor(SampleID), .data[[input$PC_RF_RFMixSort]])) |>
       pivot_longer(cols = -SampleID,
                    names_to = "Region",
                    values_to = "Probability")
@@ -685,7 +695,7 @@ server <- function(input, output) {
       pivot_wider(id_cols = "SampleID",
                   names_from = "Region",
                   values_from = "Probability") |>
-      mutate(SampleID = fct_reorder(factor(SampleID), SAS)) |>
+      mutate(SampleID = fct_reorder(factor(SampleID), EUR)) |>
       pivot_longer(cols = -SampleID,
                    names_to = "Region",
                    values_to = "Probability")
