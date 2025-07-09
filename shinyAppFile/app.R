@@ -298,16 +298,18 @@ ui <- fluidPage(
       )
     ),
     # Tab 7: PC + RF vs. PC + UMAP + RF ----
-    tabPanel(
-      title = "Method Comparison",
-      sidebarLayout(
-        sidebarPanel = sidebarPanel(),
-        mainPanel = mainPanel(
-          DTOutput("PC_RF_VS_PC_UMAP_RF"),
-          verbatimTextOutput("PC_RF_VS_PC_UMAP_RF_CrossTable")
-        )
-      )
-    )
+    tabPanel(title = "Method Comparison",
+             sidebarLayout(
+               sidebarPanel = sidebarPanel(
+                 uiOutput("PC_RF_RegionSelect"),
+                 uiOutput("PC_UMAP_RF_RegionSelect")
+               ),
+               mainPanel = mainPanel(
+                 DTOutput("PC_RF_VS_PC_UMAP_RF"),
+                 verbatimTextOutput("PC_RF_VS_PC_UMAP_RF_CrossTable"),
+                 plotOutput("RFMixComparison")
+               )
+             ))
     #end of UI ----
   )
 )
@@ -695,7 +697,7 @@ server <- function(input, output) {
       pivot_wider(id_cols = "SampleID",
                   names_from = "Region",
                   values_from = "Probability") |>
-      mutate(SampleID = fct_reorder(factor(SampleID), EUR)) |>
+      mutate(SampleID = fct_reorder(factor(SampleID), .data[[input$PC_UMAP_RF_RFMixSort]])) |>
       pivot_longer(cols = -SampleID,
                    names_to = "Region",
                    values_to = "Probability")
@@ -756,6 +758,73 @@ server <- function(input, output) {
         PC_RF_UMAP = PC_VS_PC_UMAP_comparisonDF() |> with(PC_UMAP_RandomForestPrediction)
       ) |> 
         ftable()
+    })
+  
+  output$PC_RF_RegionSelect <-
+    renderUI({
+      selectInput(
+        inputId = "PC_RF_RegionSelectInput",
+        label = "Region from PC + Random Forest",
+        choices = PC_VS_PC_UMAP_comparisonDF() |>
+          with(PC_RandomForestPrediction) |>
+          unique()
+      )
+    })
+  
+  output$PC_UMAP_RF_RegionSelect <-
+    renderUI({
+      selectInput(
+        inputId = "PC_UMAP_RF_RegionSelectInput",
+        label = "Region from PC + UMAP + Random Forest",
+        choices = PC_VS_PC_UMAP_comparisonDF() |>
+          with(PC_UMAP_RandomForestPrediction) |>
+          unique()
+      )
+    })
+  
+  idsOfBothRegions <- reactive({
+    PC_VS_PC_UMAP_comparisonDF() |>
+      filter(
+        PC_RandomForestPrediction == input$PC_RF_RegionSelectInput,
+        PC_UMAP_RandomForestPrediction == input$PC_UMAP_RF_RegionSelectInput
+      ) |> 
+      with(SampleID)
+  })
+  
+  output$RFMixComparison <-
+    renderPlot({
+      fread("RFMixResults.csv") |> filter(SampleID %in% idsOfBothRegions()) |>
+        ggplot(mapping = aes(
+          x = SampleID,
+          y = Probability,
+          color = Region,
+          fill = Region
+        )) +
+        geom_bar(stat = "identity") +
+        scale_color_brewer(palette = "Dark2", na.value = "grey40") +
+        scale_fill_brewer(palette = "Dark2", na.value = "grey40")  +
+        labs(
+          x = "Sample",
+          y = "Ancestral Decomposition",
+          title = "Local Ancestry Inference",
+          subtitle = paste0(
+            "Samples Predicted as ",
+            input$PC_RF_RegionSelectInput,
+            " under PC+RF and ",
+            input$PC_UMAP_RF_RegionSelectInput,
+            " under PC+UMAP+RF"
+          )
+        ) +
+        theme_bw() +
+        theme(
+          legend.text = element_text(size = 14),
+          legend.title = element_text(size = 14),
+          axis.text.x = element_text(
+            angle = 90,
+            vjust = 0.5,
+            hjust = 1
+          )
+        )
     })
 }
 
