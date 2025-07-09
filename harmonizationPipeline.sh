@@ -108,6 +108,7 @@ Rscript $pathToRepo/snpNonBiAllelic.R $returnDirectory
 plink --bfile allData \
     --exclude nonBiAllelicSnps.txt \
     --allow-no-sex \
+    --rel-cutoff 0.185 \
     --make-bed \
     --out allDataBiAllelic
     
