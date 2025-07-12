@@ -17,7 +17,8 @@ uniqueSnpIdentifiers <- function(fileName) {
   dt <- dt[
     Chromosome %in% 1:22 &
       Allele1 %in% c("A", "T", "C", "G") &
-      Allele2 %in% c("A", "T", "C", "G")
+      Allele2 %in% c("A", "T", "C", "G") &
+      Allele1 != Allele2
   ]
   
   # Create allele options
