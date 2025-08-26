@@ -124,30 +124,24 @@ ui <- fluidPage(
             label = "How many PCs?",
             min = 1,
             max = ncol(pcTable) - 3,
-            value = 8
-          ),
-          h3("Random Forest Settings"),
-          sliderInput(
-            inputId = "PC_RF_ntree",
-            label = "How many trees?",
-            min = 100L,
-            max = 1000L,
-            value = 500L
-          ),
-          uiOutput("PC_RF_mtry"),
-          sliderInput(
-            inputId = "PC_RF_nodesize",
-            label = "Minimum Nodesize?",
-            min = 1L,
-            max = 10L,
-            step = 1L,
-            value = 1L
+            value = 4
           ),
           h3("Evaluation Metrics"),
           div(
             strong("OOB Error on Reference Panel:"),
-            # This acts as a label
             textOutput("PC_RF_TrainingError")
+          ),
+          div(
+            strong("Study Sample Sum Squared Error vs. RFMix"),
+            textOutput("PC_RF_MSE")
+          ),
+          div(
+            strong("Study Sample Sum Absolute Error vs. RFMix"),
+            textOutput("PC_RF_MAE")
+          ),
+          div(
+            strong("Study Sample KL Divergence vs. RFMix"),
+            textOutput("PC_RF_KL")
           ),
           h3("Prediction Classification"),
           sliderInput(
@@ -168,28 +162,12 @@ ui <- fluidPage(
         mainPanel = mainPanel(
           plotOutput("PC_RF_Assignments"),
           plotOutput("PC_RF_Assignments_With_PC"),
-          plotOutput("PC_RF_RFMixPlot")
+          plotOutput("PC_RF_RFMixPlot"),
+          plotOutput("exampleOutput")
         )
       )
     ),
-    # Tab 3: UMAP ----
-    tabPanel(
-      title = "UMAP",
-      sidebarLayout(
-        sidebarPanel = sidebarPanel(
-          checkboxGroupInput(
-            inputId = "UMAP_Regions",
-            label = "Regions",
-            choices = UMAP_Table$trainingLabel |> unique(),
-            selected = UMAP_Table$trainingLabel |> unique()
-          )
-        ),
-        mainPanel = mainPanel(plotOutput("UMAP_Plot"))
-      )
-    ),
-    #Tab 4: UMAP + RF ----
-    tabPanel(title = "UMAP + Random Forest"),
-    #Tab 5: PCA + UMAP ----
+    #Tab 3: PCA + UMAP ----
     tabPanel(
       title = "PCA + UMAP",
       titlePanel("UMAP on First 20 Principal Components"),
@@ -219,7 +197,7 @@ ui <- fluidPage(
         mainPanel = mainPanel(plotOutput("PC_UMAP_Plot"))
       )
     ),
-    #Tab 6: PCA + UMAP + RF ----
+    #Tab 4: PCA + UMAP + RF ----
     tabPanel(
       title = "PC + UMAP + Random Forest",
       sidebarLayout(
@@ -233,48 +211,15 @@ ui <- fluidPage(
             value = 5,
             step = 1
           ),
-          sliderInput(
-            inputId = "PC_UMAP_RF_KNN",
-            label = "Neighborhood Size",
-            min = 5,
-            max = 50,
-            value = 15,
-            step = 1
-          ),
-          selectInput(
-            inputId = "PC_UMAP_RF_Metric",
-            label = "Metric",
-            choices = c("euclidean", "cosine", "manhattan", "hamming"),
-            selected = "euclidean"
-          ),
-          h3("Random Forest Settings"),
-          sliderInput(
-            inputId = "PC_UMAP_RF_ntree",
-            label = "How many trees?",
-            min = 100,
-            max = 1000,
-            value = 500,
-            step = 1
-          ),
-          sliderInput(
-            inputId = "PC_UMAP_RF_mtry",
-            label = "Variables to select at each split?",
-            min = 1,
-            max = 10,
-            value = 2,
-            step = 1
-          ),
-          sliderInput(
-            inputId = "PC_UAMP_RF_nodesize",
-            label = "Minimum Nodesize?",
-            min = 1,
-            max = 10,
-            value = 1,
-            step = 1
-          ),
           h3("Evaluation Metrics"),
           h5("OOB Error on Reference Panel"),
           textOutput("PC_UMAP_RF_Training_Error"),
+          h5("Study Sample Sum Squared Error vs. RFMix"),
+          textOutput("PC_UMAP_RF_MSE"),
+          h5("Study Sample Sum Absolute Error vs. RFMix"),
+          textOutput("PC_UMAP_RF_MAE"),
+          h5("Study Sample KL Divergence vs. RFMix"),
+          textOutput("PC_UMAP_RF_KL"),
           h3("Prediction Classification"),
           sliderInput(
             inputId = "PC_UMAP_RF_Threshold",
@@ -293,11 +238,12 @@ ui <- fluidPage(
         ),
         mainPanel = mainPanel(
           plotOutput("PC_UMAP_RF_Prediction_Plot"),
-          plotOutput("PC_UMAP_RF_RFMixPlot")
+          plotOutput("PC_UMAP_RF_RFMixPlot"),
+          plotOutput("PC_UMAP_RF_Continuous_Plot")
         )
       )
     ),
-    # Tab 7: PC + RF vs. PC + UMAP + RF ----
+    # Tab 5: Method Comparison ----
     tabPanel(title = "Method Comparison",
              sidebarLayout(
                sidebarPanel = sidebarPanel(
@@ -305,7 +251,6 @@ ui <- fluidPage(
                  uiOutput("PC_UMAP_RF_RegionSelect")
                ),
                mainPanel = mainPanel(
-                 DTOutput("PC_RF_VS_PC_UMAP_RF"),
                  verbatimTextOutput("PC_RF_VS_PC_UMAP_RF_CrossTable"),
                  plotOutput("RFMixComparison")
                )
@@ -345,19 +290,6 @@ server <- function(input, output) {
     })
   
   #Tab 2: PC + RF -----
-  output$PC_RF_mtry <-
-    renderUI({
-      sliderInput(
-        inputId = "PC_RF_mtrySlider",
-        label = "Variables to select at each split?",
-        min = 1,
-        max = input$numComponentPC_RF,
-        value = max(floor(sqrt(
-          input$numComponentPC_RF
-        )), 1),
-        step = 1
-      )
-    })
   
   PC_RF_Train_N_PC <- reactive({
     PC_RF_Train |>
@@ -375,10 +307,7 @@ server <- function(input, output) {
     reactive({
       randomForest(
         formula = factor(Region) ~ .,
-        data = PC_RF_Train_N_PC(),
-        ntree = input$PC_RF_ntree,
-        mtry = input$PC_RF_mtrySlider,
-        nodesize = input$PC_RF_nodesize
+        data = PC_RF_Train_N_PC()
       )
     })
   
@@ -405,6 +334,45 @@ server <- function(input, output) {
         ) |>
         left_join(y = pcTable, by = "SampleID")
     })
+  
+  PC_RF_Continuous_Result <- reactive({
+    predict(object = PC_RF_Object(),
+            newdata = PC_RF_Test_N_PC(),
+            type = "prob") |>
+      as.data.frame() |>
+      rownames_to_column("SampleID") |>
+      mutate(SampleID = SampleID |> 
+               factor() |>
+               fct_reorder(.data[[input$PC_RF_RFMixSort]])) |>
+      pivot_longer(cols = -SampleID,
+                   names_to = "Region",
+                   values_to = "Probability") |>
+      filter(SampleID %in% PC_RF_IDsForRFMix())
+  })
+  
+  output$exampleOutput <- renderPlot({
+    PC_RF_Continuous_Result() |> 
+      ggplot(mapping = aes(
+        x = SampleID,
+        y = Probability,
+        color = Region,
+        fill = Region
+      )) +
+      geom_bar(stat = "identity") +
+      theme_bw() +
+      scale_color_brewer(palette = "Dark2", na.value = "grey40") +
+      scale_fill_brewer(palette = "Dark2", na.value = "grey40") +
+      theme(
+        legend.text = element_text(size = 14),
+        legend.title = element_text(size = 14),
+        axis.text.x = element_text(
+          angle = 90,
+          vjust = 0.5,
+          hjust = 1
+        )
+      ) +
+      labs(title = "Random Forest Posterior Probabilities on Study Sample Data")
+  })
   
   output$PC_RF_Assignments <-
     renderPlot({
@@ -516,22 +484,44 @@ server <- function(input, output) {
       )
   })
   
-  #Tab 3: UMAP ----
-  output$UMAP_Plot <-
-    renderPlot({
-      ggplot(
-        data = UMAP_Table |> filter(trainingLabel %in% input$UMAP_Regions),
-        mapping = aes(x = UMAP1, y = UMAP2, color = Region)
-      ) +
-        geom_point(size = 3) +
-        theme_bw() +
-        labs(x = "UMAP1", y = "UMAP2", title = "UMAP on Reference Panel and Study Sample Genotypes") +
-        scale_color_brewer(palette = "Dark2", na.value = "grey40") +
-        theme(legend.text = element_text(size = 14),
-              legend.title = element_text(size = 14))
+  PC_RF_Continuous_DF <-
+    reactive({
+      predict(object = PC_RF_Object(),
+              newdata = PC_RF_Test_N_PC(),
+              type = "prob") |>
+        as.data.frame() |>
+        rownames_to_column("SampleID") |>
+        pivot_longer(cols = -SampleID,
+                     names_to = "Region",
+                     values_to = "Probability")
     })
-  #Tab 4: UMAP + RF ----
-  #Tab 5: UMAP + PCA ----
+  
+  output$PC_RF_MSE <-
+    renderText({
+      fread("RFMixResults.csv") |>
+        inner_join(y = PC_RF_Continuous_DF(), by = c("SampleID", "Region")) |> 
+        mutate(MSE = (Probability.x - Probability.y)^2) |> 
+        with(MSE) |> 
+        sum()
+    })
+  
+  output$PC_RF_MAE <- renderText({
+    fread("RFMixResults.csv") |>
+      inner_join(y = PC_RF_Continuous_DF(), by = c("SampleID", "Region")) |> 
+      mutate(MAE = abs(Probability.x - Probability.y)) |> 
+      with(MAE) |> 
+      sum()
+  })
+  
+  output$PC_RF_KL <- renderText({
+    fread("RFMixResults.csv") |>
+      inner_join(y = PC_RF_Continuous_DF(), by = c("SampleID", "Region")) |>
+      mutate(KL = Probability.x * log(Probability.x / (Probability.y + 0.0001))) |>
+      with(KL) |>
+      sum(na.rm = TRUE)
+  })
+  
+  #Tab 3: UMAP + PCA ----
   
   PC_UMAP_Table <-
     reactive({
@@ -572,7 +562,7 @@ server <- function(input, output) {
               legend.title = element_text(size = 14))
     })
   
-  #Tab 6: PC + UMAP + RF ----
+  #Tab 4: PC + UMAP + RF ----
   PC_UMAP_RF_Prep <- reactive({
     pcTable |>
       column_to_rownames("SampleID") |>
@@ -580,9 +570,7 @@ server <- function(input, output) {
       scale() |>
       umap(
         n_threads = 4,
-        n_neighbors = input$PC_UMAP_RF_KNN,
-        n_components = input$PC_UMAP_RF_N_Components,
-        metric = input$PC_UMAP_RF_Metric
+        n_components = input$PC_UMAP_RF_N_Components
       ) |>
       as.data.frame() |>
       set_colnames(paste0("UMAP", 1:input$PC_UMAP_RF_N_Components)) |>
@@ -606,10 +594,7 @@ server <- function(input, output) {
     reactive({
       randomForest(
         formula = factor(Region) ~ .,
-        data = PC_UMAP_RF_Train(),
-        ntree = input$PC_UMAP_RF_ntree,
-        mtry = min(input$PC_UMAP_RF_mtry, input$PC_UMAP_RF_N_Components),
-        nodesize = input$PC_UAMP_RF_nodesize
+        data = PC_UMAP_RF_Train()
       )
     })
   
@@ -734,7 +719,72 @@ server <- function(input, output) {
           )
         )
     })
-  #Tab 7: PC + RF vs. PC + UMAP + RF ----
+  
+  PC_UMAP_RF_Predictions_Continuous <-
+    reactive({
+      predict(object = PC_UMAP_RF_Object(),
+              newdata = PC_UMAP_RF_Test(),
+              type = "prob") |>
+        as.data.frame() |>
+        rownames_to_column("SampleID") |>
+        pivot_longer(cols = -SampleID,
+                     names_to = "Region",
+                     values_to = "Probability")
+    })
+  
+  output$PC_UMAP_RF_Continuous_Plot <-
+    renderPlot({
+      ggplot(
+        data = PC_UMAP_RF_Predictions_Continuous() |>
+          filter(SampleID %in% PC_UMAP_RF_IDsForRFMix()),
+        mapping = aes(
+          x = SampleID,
+          y = Probability,
+          color = Region,
+          fill = Region
+        )
+      ) +
+        geom_bar(stat = "identity") +
+        theme_bw() +
+        scale_color_brewer(palette = "Dark2", na.value = "grey40") +
+        scale_fill_brewer(palette = "Dark2", na.value = "grey40") +
+        theme(
+          legend.text = element_text(size = 14),
+          legend.title = element_text(size = 14),
+          axis.text.x = element_text(
+            angle = 90,
+            vjust = 0.5,
+            hjust = 1
+          )
+        )
+    })
+  
+  output$PC_UMAP_RF_MSE <-
+    renderText({
+      fread("RFMixResults.csv") |>
+        inner_join(y = PC_UMAP_RF_Predictions_Continuous(), by = c("SampleID", "Region")) |> 
+        mutate(MSE = (Probability.x - Probability.y)^2) |> 
+        with(MSE) |> 
+        sum()
+    })
+  
+  output$PC_UMAP_RF_MAE <- renderText({
+    fread("RFMixResults.csv") |>
+      inner_join(y = PC_UMAP_RF_Predictions_Continuous(), by = c("SampleID", "Region")) |> 
+      mutate(MAE = abs(Probability.x - Probability.y)) |> 
+      with(MAE) |> 
+      sum()
+  })
+  
+  output$PC_UMAP_RF_KL <- renderText({
+    fread("RFMixResults.csv") |>
+      inner_join(y = PC_UMAP_RF_Predictions_Continuous(), by = c("SampleID", "Region")) |>
+      mutate(KL = Probability.x * log(Probability.x / (Probability.y + 0.0001))) |>
+      with(KL) |>
+      sum(na.rm = TRUE)
+  })
+  
+  #Tab 5: PC + RF vs. PC + UMAP + RF ----
   #PC_UMAP_RF_Predictions
   
   PC_VS_PC_UMAP_comparisonDF <- reactive({
@@ -747,8 +797,8 @@ server <- function(input, output) {
     ) 
   })
   
-  output$PC_RF_VS_PC_UMAP_RF <- renderDT({
-    PC_VS_PC_UMAP_comparisonDF()
+  EvalMetricComparison <- reactive({
+    cbind(c(PC_RF_MSE), c(), c())
   })
   
   output$PC_RF_VS_PC_UMAP_RF_CrossTable <-
@@ -793,7 +843,8 @@ server <- function(input, output) {
   
   output$RFMixComparison <-
     renderPlot({
-      fread("RFMixResults.csv") |> filter(SampleID %in% idsOfBothRegions()) |>
+      fread("RFMixResults.csv") |>
+        filter(SampleID %in% idsOfBothRegions()) |>
         ggplot(mapping = aes(
           x = SampleID,
           y = Probability,
