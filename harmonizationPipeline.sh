@@ -132,6 +132,14 @@ plink --bfile allDataBiAllelic \
 #perform UMAP directly on genotype data
 Rscript $pathToRepo/umapOnBigData.R $returnDirectory
 
+#recode plink bfile to compressed vcf (prepping for popVAE)
+plink --bfile allDataBiAllelic --recode vcf-iid --out allDataBiAllelic
+
+# Run PopVAE using the specific Python from the popvae environment
+~/miniconda3/envs/popvae/bin/python popvae.py \
+    --infile allDataBiAllelic.vcf.gz \
+    --out vaeResult
+
 #copy shiny app template
 cp -r $pathToRepo/shinyAppFile $returnDirectory
 cp $popLabels $returnDirectory/shinyAppFile/PopLabels.txt
