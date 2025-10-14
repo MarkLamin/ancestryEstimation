@@ -1,0 +1,193 @@
+---
+title: "comparisonReport"
+author: "Mark Lamin"
+format: pdf
+editor: visual
+---
+
+# Libraries 
+
+```{r}
+library(tidyverse) |> suppressPackageStartupMessages()
+library(data.table) |> suppressPackageStartupMessages()
+library(magrittr) |> suppressPackageStartupMessages()
+library(umap) |> suppressPackageStartupMessages()
+library(randomForest) |> suppressPackageStartupMessages()
+```
+
+# Global Variables
+
+```{r}
+#the pc coordinates
+pcTable <- fread("pcaResult.eigenvec") |>
+  mutate(SampleID =  case_when(V1=="0" ~ V2, V1==V2 ~ V2, .default = paste(V1, V2, sep="_"))) |> 
+  select(-V1, -V2) |> 
+  column_to_rownames("SampleID") %>%
+  set_colnames(paste0("PC", seq_len(ncol(.))))
+
+#the population labels
+popDim <- fread("PopLabels.txt")
+```
+
+#Functions 
+
+```{r}
+
+#Used for PC and/or UMAP, returns a table with the desired dimensionality in either PC or UMAP latent space
+dimensionalReductionTable <- function(df, pcDim = 20, umapDim = 0) {
+  dfCol <- ncol(df)
+  
+  if (df |> colnames() |> identical(paste0("PC", 1:dfCol)) |> not()) {
+    stop("column names of `df` must follow the naming convention `PC1`, `PC2`, ...")
+  }
+  
+  if (pcDim |> is_in(1:dfCol) |> not()) {
+    stop("`pcDim` must be an integer between 1 and the number of columns inclusive")
+  }
+  
+  if (umapDim |> is_in(c(0, 2:100)) |> not()) {
+    stop("`umapDim` must be an integer either between 2 and 100 inclusive, or 0")
+  }
+  
+  returnDim <- df |> select(all_of(paste0("PC", 1:pcDim)))
+  
+  #run umap (if indicated)
+  if (umapDim > 0) {
+    returnDim <- returnDim |>
+      umap(n_components = umapDim) |> 
+      with(layout) |> 
+      as.data.frame() %>%
+      set_colnames(paste0("UMAP", seq_len(ncol(.))))
+  }
+  
+  return(returnDim)
+}
+
+#returns a list of two tables: one for the reference panel and another for the study sample
+testTrainSplit <- function(df) {
+  df |>
+    rownames_to_column("SampleID") |>
+    left_join(y = popDim, by = "SampleID") |>
+    column_to_rownames("SampleID") |>
+    mutate(Region = factor(Region)) |>
+    split(f = ~ if_else(
+      condition = is.na(Region),
+      true = "testing",
+      false = "training"
+    ))
+}
+
+#takes the list of test/train
+#returns a table with one row per sample, a column for the predicted ancestry
+rfAssignmentTable <- function(testTrainSplitObject) {
+  if (is.list(testTrainSplitObject) |> not()) {
+    stop("`testTrainSplitObject` must be a list")
+  }
+  
+  randomForest(formula = Region ~ ., data = testTrainSplitObject$training) |>
+    predict(newdata = testTrainSplitObject$testing, type = "prob") |>
+    as.data.frame() |>
+    rownames_to_column("SampleID") |>
+    pivot_longer(cols = -SampleID,
+                 names_to = "Region",
+                 values_to = "Probability") |>
+    mutate(Region = factor(Region)) |> 
+    slice_max(order_by = Probability,
+              by = SampleID,
+              with_ties = FALSE)
+}
+
+#takes the results from supervised classifier (i.e., from rfAssignmentTable)
+plotDiscreteAncestry <-
+  function(df,
+           otherCutoff = 0.9,
+           dimensionalReductionMethod,
+           classificationMethod) {
+    df |>
+      mutate(
+        Assignment = if_else(
+          condition = Probability < otherCutoff,
+          true = "Other",
+          false = Region
+        ) |>
+          factor(levels = levels(Region) |> c("Other"))
+      ) |>
+      ggplot(mapping = aes(x = Assignment, color = Assignment, fill = Assignment)) +
+      geom_bar() +
+      scale_x_discrete(drop = FALSE) +
+      theme_bw() +
+      labs(
+        x = "Region",
+        title = paste0(
+          classificationMethod,
+          " Ancestry Assignment Predictions from ",
+          dimensionalReductionMethod
+        ),
+        subtitle = paste0("Confidence Threshold of ", otherCutoff)
+      ) +
+      scale_color_brewer(palette = "Dark2", na.value = "grey40") +
+      scale_fill_brewer(palette = "Dark2", na.value = "grey40") +
+      theme(legend.text = element_text(size = 14),
+            legend.title = element_text(size = 14))
+  }
+
+numOthers <- function(df, otherCutoff){
+  df |>
+      mutate(
+        Assignment = if_else(
+          condition = Probability < otherCutoff,
+          true = "Other",
+          false = Region
+        )) |> 
+    with(Assignment) |> 
+    equals("Other") |> 
+    sum()
+}
+```
+
+# Applying functions to data
+
+Here are some examples so that you can apply it to your own data
+```{r}
+#starting from principal components
+pcTable |>
+  #choose 4 PCs
+  dimensionalReductionTable(pcDim = 4) |>
+  testTrainSplit() |>
+  #use random forest classifier
+  rfAssignmentTable() |>
+  #plot assignments
+  plotDiscreteAncestry(
+    #cutoff of 90 percent
+    otherCutoff = 0.9,
+    dimensionalReductionMethod = "PCA",
+    classificationMethod = "Random Forest"
+  )
+
+#starting from principal components
+pcTable |>
+  #chooses 20 PCs, 2 UMAP coordinates
+  dimensionalReductionTable(umapDim = 2) |>
+  testTrainSplit() |>
+  #uses random forest classifier
+  rfAssignmentTable() |>
+  #plots assignments
+  plotDiscreteAncestry(
+    #cutoff of 90 percent
+    otherCutoff = 0.9,
+    dimensionalReductionMethod = "PC + UMAP",
+    classificationMethod = "Random Forest"
+  )
+
+# #starting from VAE latent space
+fread("combined_latent_coords.txt") |>
+  select(-sd1, -sd2) |>
+  column_to_rownames("sampleID") |>
+  testTrainSplit() |>
+  rfAssignmentTable() |>
+  plotDiscreteAncestry(
+    otherCutoff = 0.9,
+    dimensionalReductionMethod = "VAE",
+    classificationMethod = "Random Forest"
+  )
+```
