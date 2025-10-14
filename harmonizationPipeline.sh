@@ -15,6 +15,7 @@ returnDirectory=$3
 pathToRepo=$4
 popLabels=$5
 rfMixResults=$6
+pathToPopvae=$7
 
 #make return directory if it doesn't exist
 mkdir -p $returnDirectory
@@ -136,7 +137,7 @@ Rscript $pathToRepo/umapOnBigData.R $returnDirectory
 plink --bfile allDataBiAllelic --recode vcf-iid --out allDataBiAllelic
 
 # Run PopVAE using the specific Python from the popvae environment
-~/miniconda3/envs/popvae/bin/python popvae.py \
+~/miniconda3/envs/popvae/bin/python $pathToPopvae/popvae.py \
     --infile allDataBiAllelic.vcf \
     --out vaeResult
 
