@@ -133,8 +133,11 @@ plink --bfile allDataBiAllelic \
 #perform UMAP directly on genotype data
 Rscript $pathToRepo/umapOnBigData.R $returnDirectory
 
-#recode plink bfile to compressed vcf (prepping for popVAE)
+#recode plink bfile to vcf (prepping for popVAE)
 plink --bfile allDataBiAllelic --recode vcf-iid --out allDataBiAllelic
+
+#recode vcf to compressed vcf
+bgzip -c allDataBiAllelic.vcf > allDataBiAllelic.vcf.gz && tabix -p vcf allDataBiAllelic.vcf.gz
 
 # Run PopVAE using the specific Python from the popvae environment
 ~/miniconda3/envs/popvae/bin/python $pathToPopvae/popvae.py \
