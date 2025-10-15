@@ -23,6 +23,7 @@ mkdir -p $returnDirectory
 cd $returnDirectory
 
 module load plink
+module load htslib
 module load R/4.4.0-openblas-rocky8
 
 #load datasets into desired directory
