@@ -142,7 +142,7 @@ bgzip -c allDataBiAllelic.vcf > allDataBiAllelic.vcf.gz && tabix -p vcf allDataB
 
 # Run PopVAE using the specific Python from the popvae environment
 ~/miniconda3/envs/popvae/bin/python $pathToPopvae/popvae.py \
-    --infile allDataBiAllelic.vcf \
+    --infile allDataBiAllelic.vcf.gz \
     --out vaeResult
 
 #copy shiny app template
